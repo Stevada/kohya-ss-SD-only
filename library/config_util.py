@@ -98,6 +98,7 @@ class FineTuningSubsetParams(BaseSubsetParams):
 @dataclass
 class ControlNetSubsetParams(BaseSubsetParams):
     conditioning_data_dir: str = None
+    use_identity_conditioning: bool = False
     caption_extension: str = ".caption"
     cache_info: bool = False
 

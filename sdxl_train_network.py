@@ -11,6 +11,9 @@ setup_logging()
 import logging
 logger = logging.getLogger(__name__)
 
+# Import for CLIP vision model (identity conditioning)
+from transformers import CLIPVisionModelWithProjection, CLIPImageProcessor
+
 class SdxlNetworkTrainer(train_network.NetworkTrainer):
     def __init__(self):
         super().__init__()
@@ -45,6 +48,33 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
         self.load_stable_diffusion_format = load_stable_diffusion_format
         self.logit_scale = logit_scale
         self.ckpt_info = ckpt_info
+
+        # Load CLIP vision model for identity conditioning if requested
+        if hasattr(args, 'use_identity_conditioning') and args.use_identity_conditioning:
+            CLIP_VISION_MODEL = "laion/CLIP-ViT-bigG-14-laion2B-39B-b160k"
+            logger.info(f"Loading CLIP vision model for identity conditioning: {CLIP_VISION_MODEL}")
+
+            try:
+                clip_vision_model = CLIPVisionModelWithProjection.from_pretrained(
+                    CLIP_VISION_MODEL,
+                    projection_dim=1280
+                ).to(accelerator.device, dtype=weight_dtype)
+                clip_vision_processor = CLIPImageProcessor.from_pretrained(CLIP_VISION_MODEL)
+
+                # Freeze CLIP vision model - only LoRA weights will be trained
+                clip_vision_model.requires_grad_(False)
+                clip_vision_model.eval()
+
+                self.clip_vision_model = clip_vision_model
+                self.clip_vision_processor = clip_vision_processor
+                logger.info("CLIP vision model loaded successfully")
+            except Exception as e:
+                logger.error(f"Failed to load CLIP vision model: {e}")
+                logger.error("Please check network connection or download the model manually")
+                raise
+        else:
+            self.clip_vision_model = None
+            self.clip_vision_processor = None
 
         return sdxl_model_util.MODEL_VERSION_SDXL_BASE_V1_0, [text_encoder1, text_encoder2], vae, unet
 
@@ -91,6 +121,16 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
             # Text Encoderから毎回出力を取得するので、GPUに乗せておく
             text_encoders[0].to(accelerator.device, dtype=weight_dtype)
             text_encoders[1].to(accelerator.device, dtype=weight_dtype)
+
+        # Pass CLIP vision model to ControlNetDataset if identity conditioning is enabled
+        if hasattr(args, 'use_identity_conditioning') and args.use_identity_conditioning:
+            if hasattr(self, 'clip_vision_model') and self.clip_vision_model is not None:
+                logger.info("Passing CLIP vision model to ControlNetDataset for identity conditioning")
+                for dataset in dataset.datasets if hasattr(dataset, 'datasets') else [dataset]:
+                    if hasattr(dataset, 'clip_vision_model'):
+                        dataset.clip_vision_model = self.clip_vision_model
+                        dataset.clip_vision_processor = self.clip_vision_processor
+                        logger.info(f"CLIP vision model assigned to dataset: {type(dataset).__name__}")
 
     def get_text_cond(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
         if "text_encoder_outputs1_list" not in batch or batch["text_encoder_outputs1_list"] is None:
@@ -157,7 +197,26 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
 
         # concat embeddings
         encoder_hidden_states1, encoder_hidden_states2, pool2 = text_conds
-        vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
+
+        # Inject CLIP vision embeddings for identity conditioning if available
+        if "clip_vision_embeddings" in batch and hasattr(args, 'use_identity_conditioning') and args.use_identity_conditioning:
+            clip_vision_embeds = batch["clip_vision_embeddings"].to(accelerator.device, dtype=weight_dtype)
+
+            # Apply strength scaling if specified
+            if hasattr(args, 'identity_conditioning_strength'):
+                clip_vision_embeds = clip_vision_embeds * args.identity_conditioning_strength
+
+            # Concatenate CLIP vision embeddings with text pool
+            # pool2: [B, 1280], clip_vision_embeds: [B, 1280] -> combined_pool: [B, 2560]
+            combined_pool = torch.cat([pool2, clip_vision_embeds], dim=1)
+
+            # For now, test if U-Net accepts [B, 2816] vector_embedding
+            # If it fails, we'll need to add a projection layer to reduce [B, 2560] -> [B, 1280]
+            vector_embedding = torch.cat([combined_pool, embs], dim=1).to(weight_dtype)
+        else:
+            # Standard path without identity conditioning
+            vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
+
         text_embedding = torch.cat([encoder_hidden_states1, encoder_hidden_states2], dim=2).to(weight_dtype)
 
         noise_pred = unet(noisy_latents, timesteps, text_embedding, vector_embedding)
@@ -170,6 +229,20 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
 def setup_parser() -> argparse.ArgumentParser:
     parser = train_network.setup_parser()
     sdxl_train_util.add_sdxl_training_arguments(parser)
+
+    # Add identity conditioning arguments
+    parser.add_argument(
+        "--use_identity_conditioning",
+        action="store_true",
+        help="Enable identity-preserving image conditioning using CLIP vision embeddings from conditioning images. Requires conditioning_data_dir in dataset config. / conditioning画像のCLIP vision埋め込みを使用した同一性保持画像条件付けを有効化。データセット設定にconditioning_data_dirが必要。"
+    )
+    parser.add_argument(
+        "--identity_conditioning_strength",
+        type=float,
+        default=1.0,
+        help="Strength multiplier for identity conditioning embeddings (0.0-1.0). Higher values strengthen identity preservation. Default: 1.0 / 同一性条件付け埋め込みの強度倍率 (0.0-1.0)。値が大きいほど同一性保持が強くなる。デフォルト: 1.0"
+    )
+
     return parser
 
 

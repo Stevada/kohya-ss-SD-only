@@ -2098,6 +2098,10 @@ class ControlNetDataset(BaseDataset):
 
         self.conditioning_image_transforms = IMAGE_TRANSFORMS
 
+        # CLIP vision model for identity conditioning (set externally if needed)
+        self.clip_vision_model = None
+        self.clip_vision_processor = None
+
     def make_buckets(self):
         self.dreambooth_dataset_delegate.make_buckets()
         self.bucket_manager = self.dreambooth_dataset_delegate.bucket_manager
@@ -2158,6 +2162,27 @@ class ControlNetDataset(BaseDataset):
             conditioning_images.append(cond_img)
 
         example["conditioning_images"] = torch.stack(conditioning_images).to(memory_format=torch.contiguous_format).float()
+
+        # Encode conditioning images with CLIP vision if model is available (for identity conditioning)
+        if self.clip_vision_model is not None and self.clip_vision_processor is not None:
+            clip_embeddings = []
+            for cond_img_tensor in conditioning_images:
+                # Convert tensor back to PIL for CLIP processor
+                # cond_img_tensor is already normalized [-1, 1], convert to [0, 1] then to PIL
+                cond_img_pil = transforms.ToPILImage()((cond_img_tensor + 1.0) / 2.0)
+
+                # Process with CLIP vision
+                pixel_values = self.clip_vision_processor(images=cond_img_pil, return_tensors="pt").pixel_values
+
+                with torch.no_grad():
+                    clip_output = self.clip_vision_model(pixel_values=pixel_values.to(self.clip_vision_model.device),
+                                                          output_hidden_states=True,
+                                                          return_dict=True)
+                    image_embeds = clip_output.image_embeds  # [1, 1280]
+
+                clip_embeddings.append(image_embeds.squeeze(0).cpu())  # [1280]
+
+            example["clip_vision_embeddings"] = torch.stack(clip_embeddings)  # [batch_size, 1280]
 
         return example
 
