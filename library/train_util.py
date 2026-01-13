@@ -5728,7 +5728,7 @@ def scan_test_pairs(test_images_dir):
     return test_cases
 
 
-def create_test_grid(test_cases, reference_images, generated_images):
+def create_test_grid(test_cases, control_images, generated_images):
     """
     Create a grid image combining reference and generated images.
 
@@ -5736,7 +5736,7 @@ def create_test_grid(test_cases, reference_images, generated_images):
 
     Args:
         test_cases: List of test case dicts with 'name' and 'prompt'
-        reference_images: List of PIL Images (references)
+        control_images: List of PIL Images (references)
         generated_images: List of PIL Images (generated outputs)
 
     Returns:
@@ -5754,7 +5754,7 @@ def create_test_grid(test_cases, reference_images, generated_images):
 
     grid = Image.new('RGB', (grid_width, grid_height), color='white')
 
-    for i, (ref_img, gen_img, test_case) in enumerate(zip(reference_images, generated_images, test_cases)):
+    for i, (ref_img, gen_img, test_case) in enumerate(zip(control_images, generated_images, test_cases)):
         try:
             # Resize images
             ref_resized = ref_img.resize(img_size, Image.LANCZOS)
@@ -5917,7 +5917,7 @@ def test_character_images(
             logger.info("CLIP vision model not available, generating without identity conditioning")
 
         # Generate test images
-        reference_images = []
+        control_images = []
         generated_images = []
 
         with torch.no_grad():
@@ -5925,7 +5925,7 @@ def test_character_images(
                 try:
                     # Load reference image
                     ref_image = Image.open(test_case['reference_image']).convert('RGB')
-                    reference_images.append(ref_image)
+                    control_images.append(ref_image)
 
                     # Generate image
                     logger.info(f"Generating test image for '{test_case['name']}': {test_case['prompt'][:50]}...")
@@ -5956,12 +5956,12 @@ def test_character_images(
                     logger.error(f"Failed to generate test image for {test_case['name']}: {e}")
                     # Use placeholder if generation fails
                     placeholder = Image.new('RGB', (512, 512), color='gray')
-                    reference_images.append(ref_image if 'ref_image' in locals() else placeholder)
+                    control_images.append(ref_image if 'ref_image' in locals() else placeholder)
                     generated_images.append(placeholder)
 
         # Create grid
         logger.info("Creating test grid image...")
-        grid = create_test_grid(test_cases, reference_images, generated_images)
+        grid = create_test_grid(test_cases, control_images, generated_images)
         grid.save(os.path.join(epoch_output_dir, "grid.png"))
 
         # Log to TensorBoard
@@ -5969,7 +5969,7 @@ def test_character_images(
             logger.info("Logging test images to TensorBoard...")
             try:
                 # Log individual images
-                for test_case, ref_img, gen_img in zip(test_cases, reference_images, generated_images):
+                for test_case, ref_img, gen_img in zip(test_cases, control_images, generated_images):
                     # Convert PIL to numpy for logging [C, H, W] format
                     ref_np = np.array(ref_img.convert('RGB')).transpose(2, 0, 1)
                     gen_np = np.array(gen_img.convert('RGB')).transpose(2, 0, 1)

@@ -1,4 +1,4 @@
-logs
+logs/
 __pycache__
 wd14_tagger_model
 venv
@@ -11,3 +11,4 @@ GEMINI.md
 .claude
 .gemini
 MagicMock
+dataset/

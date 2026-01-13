@@ -12,7 +12,7 @@ SDXL_MODEL="sd_xl_base_1.0.safetensors"
 LORA_WEIGHTS="output/character_lora/character_lora.safetensors"
 
 # Character reference image for identity conditioning
-REFERENCE_IMAGE="dataset/reference_images/001.jpg"
+REFERENCE_IMAGE="dataset/control_images/001.jpg"
 
 # Output settings
 OUTPUT_DIR="output/generated_images"
@@ -22,10 +22,10 @@ BATCH_SIZE=1
 PROMPT="1girl, standing at beach, sunset, beautiful smile, long hair flowing in wind"
 NEGATIVE_PROMPT="low quality, worst quality, bad anatomy, blurry, watermark, text"
 
-WIDTH=1024
-HEIGHT=1024
+WIDTH=512
+HEIGHT=512
 CFG_SCALE=7.0
-STEPS=40
+STEPS=20
 SAMPLER="k_euler_a"
 
 # Identity conditioning strength (0.0-1.0)

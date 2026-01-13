@@ -14,7 +14,7 @@ dataset/
 │   ├── 001.jpg            # Character in pose 1
 │   ├── 002.jpg            # Character in pose 2
 │   └── 003.jpg            # Character in pose 3
-├── reference_images/       # Character reference images (for identity)
+├── control_images/       # Character reference images (for identity)
 │   ├── 001.jpg            # Same character, pose/angle for image 001
 │   ├── 002.jpg            # Same character, pose/angle for image 002
 │   └── 003.jpg            # Same character, pose/angle for image 003
@@ -33,7 +33,7 @@ Edit the paths in `sdxl_train.sh`:
 ```bash
 PRETRAINED_MODEL="path/to/sd_xl_base_1.0.safetensors"
 TRAIN_DATA_DIR="dataset/target_images"
-CONDITIONING_DATA_DIR="dataset/reference_images"
+CONDITIONING_DATA_DIR="dataset/control_images"
 ```
 
 ### 3. Train
@@ -160,7 +160,7 @@ batch_size = 1
 
   [[datasets.subsets]]
   image_dir = "dataset/target_images"
-  conditioning_data_dir = "dataset/reference_images"
+  conditioning_data_dir = "dataset/control_images"
   caption_extension = ".txt"
   num_repeats = 10
   use_identity_conditioning = true

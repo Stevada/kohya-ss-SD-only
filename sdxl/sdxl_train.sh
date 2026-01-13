@@ -8,7 +8,7 @@
 # ====================
 
 # Model and output paths
-PRETRAINED_MODEL="sd_xl_base_1.0.safetensors"  # Path to SDXL base model
+PRETRAINED_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors"  # Path to SDXL base model
 OUTPUT_DIR="output/character_lora"
 OUTPUT_NAME="character_lora"
 
@@ -17,7 +17,7 @@ OUTPUT_NAME="character_lora"
 # ├── target_images/      # Training images (desired outputs)
 # │   ├── 001.jpg
 # │   ├── 002.jpg
-# ├── reference_images/   # Character reference images (identity source)
+# ├── control_images/   # Character reference images (identity source)
 # │   ├── 001.jpg        # Must match target image names
 # │   ├── 002.jpg
 # └── captions/
@@ -25,11 +25,12 @@ OUTPUT_NAME="character_lora"
 #     ├── 002.txt
 
 TRAIN_DATA_DIR="dataset/target_images"
-CONDITIONING_DATA_DIR="dataset/reference_images"
+CONDITIONING_DATA_DIR="dataset/control_images"
+TEST_CONDITIONING_DATA_DIR="dataset/control_images_test"
 CAPTION_EXTENSION=".txt"
 
 # Training parameters
-RESOLUTION="1024,1024"
+RESOLUTION="512,512"
 BATCH_SIZE=1
 LEARNING_RATE="1e-4"
 MAX_TRAIN_EPOCHS=10
@@ -87,7 +88,8 @@ accelerate launch --num_cpu_threads_per_process=8 ../sdxl_train_network.py \
   --max_data_loader_n_workers=2 \
   --persistent_data_loader_workers \
   --log_with="tensorboard" \
-  --logging_dir="${OUTPUT_DIR}/logs"
+  --logging_dir="logs" \
+  --test_character_images_dir="${TEST_CONDITIONING_DATA_DIR}"
 
 # ====================
 # NOTES
