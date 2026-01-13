@@ -24,8 +24,9 @@ OUTPUT_NAME="character_lora"
 #     ├── 001.txt
 #     ├── 002.txt
 
-TRAIN_DATA_DIR="dataset/target_images"
-CONDITIONING_DATA_DIR="dataset/reference_images"
+TRAIN_DATA_DIR="dataset"
+CONDITIONING_DATA_DIR="dataset/control_images"
+TEST_CONDITIONING_DATA_DIR="dataset/test/control_images"
 CAPTION_EXTENSION=".txt"
 
 # Training parameters
@@ -50,7 +51,7 @@ MIXED_PRECISION="bf16"
 # TRAINING COMMAND
 # ====================
 
-accelerate launch --num_cpu_threads_per_process=8 ../sdxl_train_network.py \
+accelerate launch --num_cpu_threads_per_process=8 ./sdxl_train_network.py \
   --pretrained_model_name_or_path="${PRETRAINED_MODEL}" \
   --train_data_dir="${TRAIN_DATA_DIR}" \
   --conditioning_data_dir="${CONDITIONING_DATA_DIR}" \
@@ -58,7 +59,7 @@ accelerate launch --num_cpu_threads_per_process=8 ../sdxl_train_network.py \
   --output_name="${OUTPUT_NAME}" \
   --caption_extension="${CAPTION_EXTENSION}" \
   --resolution="${RESOLUTION}" \
-  --batch_size=${BATCH_SIZE} \
+  --train_batch_size=${BATCH_SIZE} \
   --learning_rate="${LEARNING_RATE}" \
   --max_train_epochs=${MAX_TRAIN_EPOCHS} \
   --save_every_n_epochs=${SAVE_EVERY_N_EPOCHS} \
@@ -69,7 +70,6 @@ accelerate launch --num_cpu_threads_per_process=8 ../sdxl_train_network.py \
   --mixed_precision="${MIXED_PRECISION}" \
   --save_precision="fp16" \
   --cache_latents \
-  --cache_text_encoder_outputs \
   --gradient_checkpointing \
   --optimizer_type="AdamW8bit" \
   --lr_scheduler="cosine" \

@@ -8,19 +8,18 @@
 # ====================
 
 # Model paths
-SDXL_MODEL="sd_xl_base_1.0.safetensors"
+SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors"
 LORA_WEIGHTS="output/character_lora/character_lora.safetensors"
 
 # Character reference image for identity conditioning
-REFERENCE_IMAGE="dataset/reference_images/001.jpg"
+REFERENCE_IMAGE="dataset/test/control_images/ComfyUI_00012_.png"
 
 # Output settings
 OUTPUT_DIR="output/generated_images"
 BATCH_SIZE=1
 
 # Generation parameters
-PROMPT="1girl, standing at beach, sunset, beautiful smile, long hair flowing in wind"
-NEGATIVE_PROMPT="low quality, worst quality, bad anatomy, blurry, watermark, text"
+PROMPT="blowjob, The character is kneeling on the floor with her legs spread apart and her hands resting on her knees. The woman is sucking a man's dick, looking at the camera. --n low quality, worst quality, bad anatomy, blurry, watermark, text"
 
 WIDTH=1024
 HEIGHT=1024
@@ -33,7 +32,7 @@ SAMPLER="k_euler_a"
 CLIP_VISION_STRENGTH=1.0
 
 # Number of images to generate
-NUM_IMAGES=4
+NUM_IMAGES=2
 
 # ====================
 # GENERATION COMMAND
@@ -46,15 +45,14 @@ echo "Reference image: ${REFERENCE_IMAGE}"
 echo "Prompt: ${PROMPT}"
 echo ""
 
-python ../sdxl_gen_img.py \
+python ./sdxl_gen_img.py \
   --ckpt="${SDXL_MODEL}" \
   --network_module=networks.lora \
   --network_weights="${LORA_WEIGHTS}" \
   --network_mul=1.0 \
   --clip_vision_strength=${CLIP_VISION_STRENGTH} \
-  --init_image="${REFERENCE_IMAGE}" \
+  --image_path="${REFERENCE_IMAGE}" \
   --prompt="${PROMPT}" \
-  --negative_prompt="${NEGATIVE_PROMPT}" \
   --W=${WIDTH} \
   --H=${HEIGHT} \
   --scale=${CFG_SCALE} \
@@ -62,7 +60,6 @@ python ../sdxl_gen_img.py \
   --sampler="${SAMPLER}" \
   --outdir="${OUTPUT_DIR}" \
   --images_per_prompt=${NUM_IMAGES} \
-  --xformers \
   --bf16
 
 echo ""
@@ -76,13 +73,12 @@ echo "Generation complete! Images saved to: ${OUTPUT_DIR}"
 
 # echo ""
 # echo "Generating comparison images WITHOUT identity conditioning..."
-# python ../sdxl_gen_img.py \
+# python ./sdxl_gen_img.py \
 #   --ckpt="${SDXL_MODEL}" \
 #   --network_module=networks.lora \
 #   --network_weights="${LORA_WEIGHTS}" \
 #   --network_mul=1.0 \
 #   --prompt="${PROMPT}" \
-#   --negative_prompt="${NEGATIVE_PROMPT}" \
 #   --W=${WIDTH} \
 #   --H=${HEIGHT} \
 #   --scale=${CFG_SCALE} \
@@ -90,7 +86,6 @@ echo "Generation complete! Images saved to: ${OUTPUT_DIR}"
 #   --sampler="${SAMPLER}" \
 #   --outdir="${OUTPUT_DIR}/no_identity" \
 #   --images_per_prompt=${NUM_IMAGES} \
-#   --xformers \
 #   --bf16
 
 # ====================

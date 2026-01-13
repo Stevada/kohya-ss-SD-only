@@ -9,3 +9,5 @@ wandb
 .claude
 .gemini
 MagicMock
+dataset/
+output/
