@@ -1090,6 +1090,31 @@ class NetworkTrainer:
                     if args.save_state:
                         train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
+                    # Run character tests after saving checkpoint
+                    if hasattr(args, 'test_character_images_dir') and args.test_character_images_dir is not None:
+                        logger.info(f"Running character tests from: {args.test_character_images_dir}")
+                        try:
+                            train_util.test_character_images(
+                                args,
+                                accelerator,
+                                vae,
+                                tokenizer,
+                                text_encoder,
+                                unet,
+                                epoch=epoch + 1,
+                                global_step=global_step,
+                                test_images_dir=args.test_character_images_dir,
+                                output_dir=args.output_dir,
+                                clip_vision_model=getattr(self, 'clip_vision_model', None),
+                                clip_vision_processor=getattr(self, 'clip_vision_processor', None),
+                                identity_conditioning_strength=getattr(args, 'identity_conditioning_strength', 1.0),
+                                is_sdxl=self.is_sdxl if hasattr(self, 'is_sdxl') else False,
+                            )
+                            logger.info("Character tests completed successfully")
+                        except Exception as e:
+                            logger.error(f"Character testing failed: {e}")
+                            # Don't crash training if testing fails
+
             self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
 
             # end of epoch
@@ -1236,6 +1261,36 @@ def setup_parser() -> argparse.ArgumentParser:
     # parser.add_argument("--loraplus_lr_ratio", default=None, type=float, help="LoRA+ learning rate ratio")
     # parser.add_argument("--loraplus_unet_lr_ratio", default=None, type=float, help="LoRA+ UNet learning rate ratio")
     # parser.add_argument("--loraplus_text_encoder_lr_ratio", default=None, type=float, help="LoRA+ text encoder learning rate ratio")
+
+    # Character testing arguments
+    parser.add_argument(
+        "--test_character_images_dir",
+        type=str,
+        default=None,
+        help="Directory containing character test images (reference + prompt pairs). Tests run after each saved epoch. "
+        "Directory should contain {name}_ref.jpg and {name}_prompt.txt files. "
+        "/ キャラクターテスト画像のディレクトリ（リファレンス画像とプロンプトのペア）。エポック保存後にテスト実行。",
+    )
+    parser.add_argument(
+        "--test_cfg_scale",
+        type=float,
+        default=7.5,
+        help="CFG scale for character testing. Default: 7.5 / キャラクターテスト時のCFGスケール。デフォルト: 7.5",
+    )
+    parser.add_argument(
+        "--test_steps",
+        type=int,
+        default=28,
+        help="Number of sampling steps for character testing. Default: 28 / キャラクターテスト時のサンプリングステップ数。デフォルト: 28",
+    )
+    parser.add_argument(
+        "--test_sampler",
+        type=str,
+        default="euler_a",
+        choices=["ddim", "pndm", "lms", "euler", "euler_a", "heun", "dpm_2", "dpm_2_a", "dpmsolver", "dpmsolver++", "dpmsingle", "k_lms", "k_euler", "k_euler_a", "k_dpm_2", "k_dpm_2_a"],
+        help="Sampler for character testing. Default: euler_a / キャラクターテスト時のサンプラー。デフォルト: euler_a",
+    )
+
     return parser
 
 

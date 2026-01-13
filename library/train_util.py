@@ -5686,6 +5686,325 @@ def sample_image_inference(
         pass
 
 
+def scan_test_pairs(test_images_dir):
+    """
+    Scan directory for test image pairs (reference image + prompt file).
+
+    Args:
+        test_images_dir: Directory containing test pairs
+
+    Returns:
+        List of dicts with 'name', 'reference_image', 'prompt' keys
+    """
+    import glob as glob_module
+
+    ref_images = []
+    for ext in ['jpg', 'jpeg', 'png', 'webp']:
+        ref_images.extend(glob_module.glob(os.path.join(test_images_dir, f'*_ref.{ext}')))
+
+    test_cases = []
+    for ref_path in ref_images:
+        # Extract basename: test01_ref.jpg -> test01
+        basename = os.path.basename(ref_path)
+        # Remove _ref and extension
+        basename = basename.replace('_ref.', '.')
+        basename = os.path.splitext(basename)[0]
+
+        prompt_path = os.path.join(test_images_dir, f'{basename}_prompt.txt')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    prompt = f.read().strip()
+                test_cases.append({
+                    'name': basename,
+                    'reference_image': ref_path,
+                    'prompt': prompt
+                })
+            except Exception as e:
+                logger.warning(f"Failed to read prompt file {prompt_path}: {e}")
+        else:
+            logger.warning(f"No prompt file found for {ref_path}, expected {prompt_path}")
+
+    return test_cases
+
+
+def create_test_grid(test_cases, reference_images, generated_images):
+    """
+    Create a grid image combining reference and generated images.
+
+    Layout: 2 columns (reference, generated) × N rows (tests)
+
+    Args:
+        test_cases: List of test case dicts with 'name' and 'prompt'
+        reference_images: List of PIL Images (references)
+        generated_images: List of PIL Images (generated outputs)
+
+    Returns:
+        PIL Image: Grid image
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    # Resize all images to consistent size
+    img_size = (512, 512)
+
+    # Create grid canvas
+    n_tests = len(test_cases)
+    grid_width = 2 * img_size[0]  # 2 columns
+    grid_height = n_tests * img_size[1]  # N rows
+
+    grid = Image.new('RGB', (grid_width, grid_height), color='white')
+
+    for i, (ref_img, gen_img, test_case) in enumerate(zip(reference_images, generated_images, test_cases)):
+        try:
+            # Resize images
+            ref_resized = ref_img.resize(img_size, Image.LANCZOS)
+            gen_resized = gen_img.resize(img_size, Image.LANCZOS)
+
+            # Paste into grid
+            y_offset = i * img_size[1]
+            grid.paste(ref_resized, (0, y_offset))
+            grid.paste(gen_resized, (img_size[0], y_offset))
+
+            # Optionally add text labels (test name)
+            # Note: Text annotation omitted for simplicity - TensorBoard tags provide context
+        except Exception as e:
+            logger.warning(f"Failed to add test {test_case['name']} to grid: {e}")
+
+    return grid
+
+
+def test_character_images(
+    args,
+    accelerator,
+    vae,
+    tokenizer,
+    text_encoder,
+    unet,
+    epoch: int,
+    global_step: int,
+    test_images_dir: str,
+    output_dir: str,
+    clip_vision_model=None,
+    clip_vision_processor=None,
+    identity_conditioning_strength=1.0,
+    is_sdxl=False,
+):
+    """
+    Generate test images using character references and log to TensorBoard.
+
+    Args:
+        args: Training arguments
+        accelerator: Accelerator instance
+        vae: VAE model
+        tokenizer: Tokenizer (or list of tokenizers for SDXL)
+        text_encoder: Text encoder (or list of text encoders for SDXL)
+        unet: U-Net model
+        epoch: Current epoch number
+        global_step: Current global step
+        test_images_dir: Path to test images directory
+        output_dir: Output directory for saving test results
+        clip_vision_model: CLIP vision model for identity conditioning (optional)
+        clip_vision_processor: CLIP image processor (optional)
+        identity_conditioning_strength: Strength for identity conditioning (0.0-1.0)
+        is_sdxl: Whether this is SDXL training
+
+    Returns:
+        None (logs to TensorBoard via accelerator and saves to disk)
+    """
+    from PIL import Image
+    import numpy as np
+
+    # Check if test directory exists
+    if not os.path.exists(test_images_dir):
+        logger.warning(f"Test directory not found: {test_images_dir}, skipping character tests")
+        return
+
+    # Scan for test pairs
+    test_cases = scan_test_pairs(test_images_dir)
+    if len(test_cases) == 0:
+        logger.warning(f"No test pairs found in {test_images_dir} (expecting *_ref.jpg + *_prompt.txt)")
+        return
+
+    logger.info(f"Found {len(test_cases)} test cases: {[tc['name'] for tc in test_cases]}")
+
+    # Create output directory for this epoch
+    epoch_output_dir = os.path.join(output_dir, "character_tests", f"epoch_{epoch:06d}")
+    os.makedirs(epoch_output_dir, exist_ok=True)
+
+    try:
+        # Import pipeline modules
+        if is_sdxl:
+            from library.lpw_stable_diffusion_xl import SdxlStableDiffusionLongPromptWeightingPipeline
+            from library import sdxl_model_util
+        else:
+            from library.lpw_stable_diffusion import StableDiffusionLongPromptWeightingPipeline
+
+        # Get generation parameters from args (with defaults)
+        cfg_scale = getattr(args, 'test_cfg_scale', 7.5)
+        steps = getattr(args, 'test_steps', 28)
+        sampler = getattr(args, 'test_sampler', 'euler_a')
+
+        # Prepare models for inference
+        vae.to(accelerator.device, dtype=torch.float32)
+        vae.eval()
+
+        if is_sdxl:
+            text_encoder[0].to(accelerator.device)
+            text_encoder[1].to(accelerator.device)
+            text_encoder[0].eval()
+            text_encoder[1].eval()
+        else:
+            text_encoder.to(accelerator.device)
+            text_encoder.eval()
+
+        unet.to(accelerator.device)
+        unet.eval()
+
+        # Create scheduler
+        from diffusers import DDIMScheduler, PNDMScheduler, LMSDiscreteScheduler, EulerDiscreteScheduler, EulerAncestralDiscreteScheduler
+        scheduler_dict = {
+            'ddim': DDIMScheduler,
+            'pndm': PNDMScheduler,
+            'lms': LMSDiscreteScheduler,
+            'euler': EulerDiscreteScheduler,
+            'euler_a': EulerAncestralDiscreteScheduler,
+        }
+        scheduler_cls = scheduler_dict.get(sampler, EulerAncestralDiscreteScheduler)
+        scheduler = scheduler_cls(
+            num_train_timesteps=1000,
+            beta_start=0.00085,
+            beta_end=0.012,
+            beta_schedule="scaled_linear",
+        )
+
+        # Create pipeline
+        if is_sdxl:
+            pipeline = SdxlStableDiffusionLongPromptWeightingPipeline(
+                vae=vae,
+                text_encoder=text_encoder[0],
+                text_encoder_2=text_encoder[1],
+                tokenizer=tokenizer[0],
+                tokenizer_2=tokenizer[1],
+                unet=unet,
+                scheduler=scheduler,
+                clip_skip=None,
+                safety_checker=None,
+                feature_extractor=None,
+                requires_safety_checker=False,
+            )
+        else:
+            pipeline = StableDiffusionLongPromptWeightingPipeline(
+                vae=vae,
+                text_encoder=text_encoder,
+                tokenizer=tokenizer,
+                unet=unet,
+                scheduler=scheduler,
+                clip_skip=None,
+                safety_checker=None,
+                feature_extractor=None,
+                requires_safety_checker=False,
+            )
+
+        pipeline.to(accelerator.device)
+
+        # Add identity conditioning if available
+        if clip_vision_model is not None and clip_vision_processor is not None:
+            pipeline.clip_vision_model = clip_vision_model
+            pipeline.clip_vision_processor = clip_vision_processor
+            pipeline.clip_vision_strength = identity_conditioning_strength
+            logger.info(f"Using identity conditioning with strength {identity_conditioning_strength}")
+        else:
+            logger.info("CLIP vision model not available, generating without identity conditioning")
+
+        # Generate test images
+        reference_images = []
+        generated_images = []
+
+        with torch.no_grad():
+            for test_case in test_cases:
+                try:
+                    # Load reference image
+                    ref_image = Image.open(test_case['reference_image']).convert('RGB')
+                    reference_images.append(ref_image)
+
+                    # Generate image
+                    logger.info(f"Generating test image for '{test_case['name']}': {test_case['prompt'][:50]}...")
+
+                    output = pipeline(
+                        prompt=test_case['prompt'],
+                        negative_prompt=getattr(args, 'negative_prompt', ""),
+                        num_inference_steps=steps,
+                        guidance_scale=cfg_scale,
+                        width=1024 if is_sdxl else 512,
+                        height=1024 if is_sdxl else 512,
+                        num_images_per_prompt=1,
+                        generator=torch.Generator(device=accelerator.device).manual_seed(42),  # Fixed seed for consistency
+                        init_image=ref_image if (clip_vision_model is not None) else None,
+                    )
+
+                    generated_image = output.images[0]
+                    generated_images.append(generated_image)
+
+                    # Save individual images to disk
+                    ref_image.save(os.path.join(epoch_output_dir, f"{test_case['name']}_ref.jpg"))
+                    generated_image.save(os.path.join(epoch_output_dir, f"{test_case['name']}_gen.png"))
+
+                    # Clear GPU cache after each test
+                    torch.cuda.empty_cache()
+
+                except Exception as e:
+                    logger.error(f"Failed to generate test image for {test_case['name']}: {e}")
+                    # Use placeholder if generation fails
+                    placeholder = Image.new('RGB', (512, 512), color='gray')
+                    reference_images.append(ref_image if 'ref_image' in locals() else placeholder)
+                    generated_images.append(placeholder)
+
+        # Create grid
+        logger.info("Creating test grid image...")
+        grid = create_test_grid(test_cases, reference_images, generated_images)
+        grid.save(os.path.join(epoch_output_dir, "grid.png"))
+
+        # Log to TensorBoard
+        if hasattr(accelerator, 'trackers') and len(accelerator.trackers) > 0:
+            logger.info("Logging test images to TensorBoard...")
+            try:
+                # Log individual images
+                for test_case, ref_img, gen_img in zip(test_cases, reference_images, generated_images):
+                    # Convert PIL to numpy for logging [C, H, W] format
+                    ref_np = np.array(ref_img.convert('RGB')).transpose(2, 0, 1)
+                    gen_np = np.array(gen_img.convert('RGB')).transpose(2, 0, 1)
+
+                    accelerator.log({
+                        f"test/{test_case['name']}/reference": ref_np,
+                        f"test/{test_case['name']}/generated": gen_np,
+                    }, step=epoch)
+
+                # Log grid
+                grid_np = np.array(grid).transpose(2, 0, 1)
+                accelerator.log({
+                    "test_grid/comparison": grid_np
+                }, step=epoch)
+
+                logger.info("Test images logged to TensorBoard successfully")
+            except Exception as e:
+                logger.warning(f"Failed to log to TensorBoard: {e}")
+        else:
+            logger.info("TensorBoard not initialized, test images saved to disk only")
+
+    except torch.cuda.OutOfMemoryError:
+        logger.error("Out of memory during character testing")
+        torch.cuda.empty_cache()
+    except Exception as e:
+        logger.error(f"Character testing failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+    finally:
+        # Clean up
+        torch.cuda.empty_cache()
+
+    logger.info(f"Character testing completed. Results saved to {epoch_output_dir}")
+
+
 # endregion
 
 
