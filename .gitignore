@@ -10,3 +10,4 @@ wandb
 .gemini
 MagicMock
 dataset/
+output/
