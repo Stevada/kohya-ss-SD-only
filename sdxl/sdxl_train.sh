@@ -8,7 +8,7 @@
 # ====================
 
 # Model and output paths
-PRETRAINED_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors"  # Path to SDXL base model
+PRETRAINED_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyDiffusionV6XL_v6StartWithThisOne.safetensors"  # Path to SDXL base model
 OUTPUT_DIR="output/character_lora"
 OUTPUT_NAME="character_lora"
 
@@ -30,7 +30,7 @@ TEST_CONDITIONING_DATA_DIR="dataset/test/control_images"
 CAPTION_EXTENSION=".txt"
 
 # Training parameters
-RESOLUTION="512,512"
+RESOLUTION="1024,1024"
 BATCH_SIZE=1
 LEARNING_RATE="1e-4"
 MAX_TRAIN_EPOCHS=10

@@ -8,11 +8,12 @@
 # ====================
 
 # Model paths
-SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors"
-LORA_WEIGHTS="output/character_lora/character_lora.safetensors"
+# SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyRealism_V22.safetensors"
+SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyDiffusionV6XL_v6StartWithThisOne.safetensors"  # Path to SDXL base model
+LORA_WEIGHTS="output/character_lora/character_lora-000002.safetensors"
 
 # Character reference image for identity conditioning
-REFERENCE_IMAGE="dataset/test/control_images/ComfyUI_00012_.png"
+REFERENCE_IMAGE="dataset/control_images/yui_hatano_bj_1.jpg"
 
 # Output settings
 OUTPUT_DIR="output/generated_images"
@@ -21,8 +22,8 @@ BATCH_SIZE=1
 # Generation parameters
 PROMPT="blowjob, The character is kneeling on the floor with her legs spread apart and her hands resting on her knees. The woman is sucking a man's dick, looking at the camera. --n low quality, worst quality, bad anatomy, blurry, watermark, text"
 
-WIDTH=512
-HEIGHT=512
+WIDTH=1024
+HEIGHT=1024
 CFG_SCALE=7.0
 STEPS=20
 SAMPLER="k_euler_a"

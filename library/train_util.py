@@ -5689,6 +5689,7 @@ def sample_image_inference(
 def scan_test_pairs(test_images_dir):
     """
     Scan directory for test image pairs (reference image + prompt file).
+    Matches any image file with a .txt file of the same basename.
 
     Args:
         test_images_dir: Directory containing test pairs
@@ -5698,19 +5699,19 @@ def scan_test_pairs(test_images_dir):
     """
     import glob as glob_module
 
+    # Find all image files with any name
     ref_images = []
     for ext in ['jpg', 'jpeg', 'png', 'webp']:
-        ref_images.extend(glob_module.glob(os.path.join(test_images_dir, f'*_ref.{ext}')))
+        ref_images.extend(glob_module.glob(os.path.join(test_images_dir, f'*.{ext}')))
+        ref_images.extend(glob_module.glob(os.path.join(test_images_dir, f'*.{ext.upper()}')))
 
     test_cases = []
     for ref_path in ref_images:
-        # Extract basename: test01_ref.jpg -> test01
-        basename = os.path.basename(ref_path)
-        # Remove _ref and extension
-        basename = basename.replace('_ref.', '.')
-        basename = os.path.splitext(basename)[0]
+        # Extract basename without extension: test01.jpg -> test01
+        basename = os.path.splitext(os.path.basename(ref_path))[0]
 
-        prompt_path = os.path.join(test_images_dir, f'{basename}_prompt.txt')
+        # Look for .txt file with the same basename
+        prompt_path = os.path.join(test_images_dir, f'{basename}.txt')
         if os.path.exists(prompt_path):
             try:
                 with open(prompt_path, 'r', encoding='utf-8') as f:
