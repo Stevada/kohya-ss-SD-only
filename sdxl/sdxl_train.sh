@@ -8,7 +8,8 @@
 # ====================
 
 # Model and output paths
-PRETRAINED_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyDiffusionV6XL_v6StartWithThisOne.safetensors"  # Path to SDXL base model
+# PRETRAINED_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyDiffusionV6XL_v6StartWithThisOne.safetensors"  # Path to SDXL base model
+PRETRAINED_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyRealism_V22.safetensors"  # Path to SDXL base model
 OUTPUT_DIR="output/character_lora"
 OUTPUT_NAME="character_lora"
 
