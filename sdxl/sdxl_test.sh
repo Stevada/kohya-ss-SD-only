@@ -8,11 +8,12 @@
 # ====================
 
 # Model paths
-SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors"
-LORA_WEIGHTS="output/character_lora/character_lora.safetensors"
+# SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyRealism_V22.safetensors"
+SDXL_MODEL="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyDiffusionV6XL_v6StartWithThisOne.safetensors"  # Path to SDXL base model
+LORA_WEIGHTS="output/character_lora/character_lora-000002.safetensors"
 
 # Character reference image for identity conditioning
-REFERENCE_IMAGE="dataset/test/control_images/ComfyUI_00012_.png"
+REFERENCE_IMAGE="dataset/control_images/yui_hatano_bj_1.jpg"
 
 # Output settings
 OUTPUT_DIR="output/generated_images"
