@@ -27,12 +27,12 @@ resolution = 1024
 batch_size = 1
 
   [[datasets.subsets]]
-  # Path to your character images
-  image_dir = "dataset/my_character"
+  # Path to your character images (absolute path from repo root)
+  image_dir = "/root/kohya-ss-SD-only/dataset/ava"
 
   # Class tokens: "triggerword concept"
   # Examples: "ohwx person", "sks character", "mychar woman"
-  class_tokens = "ohwx person"
+  class_tokens = "ava1 girl"
 
   # Number of times to repeat each image per epoch
   # Higher values = more training on your character
@@ -42,21 +42,27 @@ batch_size = 1
   keep_tokens = 1
 
 # ============================================================
-# Regularization Dataset - Generic Images
+# Regularization Dataset - Generic Images (DISABLED)
 # ============================================================
-[[datasets]]
-resolution = 1024
-batch_size = 1
+# NOTE: Regularization is commented out because dataset/regularization is empty.
+# To enable regularization:
+# 1. Add 100-200 generic person images to dataset/regularization/
+# 2. Uncomment the section below
+# 3. Change is_reg = true (must be true for regularization!)
 
-  [[datasets.subsets]]
-  # Path to regularization images
-  image_dir = "dataset/regularization"
-
-  # Class tokens for regularization (concept only, no trigger word)
-  class_tokens = "person"
-
-  # Repeat once per epoch
-  num_repeats = 1
-
-  # Mark as regularization dataset
-  is_reg = true
+# [[datasets]]
+# resolution = 1024
+# batch_size = 1
+#
+#   [[datasets.subsets]]
+#   # Path to regularization images
+#   image_dir = "dataset/regularization"
+#
+#   # Class tokens for regularization (concept only, no trigger word)
+#   class_tokens = "person"
+#
+#   # Repeat once per epoch
+#   num_repeats = 1
+#
+#   # Mark as regularization dataset
+#   is_reg = true
