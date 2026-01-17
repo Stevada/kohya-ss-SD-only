@@ -18,14 +18,14 @@ OUTPUT_NAME="ava_lora"                     # Name for output files
 
 # === OPTIONAL: TRAINING PARAMETERS ===
 OUTPUT_DIR="./output"
-EPOCHS=10
+EPOCHS=30
 LEARNING_RATE="1e-4"                      # 1e-4 to 5e-4 recommended
 NETWORK_DIM=32                            # 16 or 8 for lower VRAM
 NETWORK_ALPHA=16
 
 # === OPTIONAL: SAMPLE GENERATION ===
 SAMPLE_PROMPTS="ava1 girl, front view, leaning on table, cafe setting, casual pose, high quality"                         # Path to prompts file (optional)
-SAMPLE_EVERY_N_EPOCHS=2                   # 0 to disable
+SAMPLE_EVERY_N_EPOCHS=5                   # 0 to disable
 
 # === EXECUTION ===
 echo "Starting SDXL LoRA DreamBooth training..."

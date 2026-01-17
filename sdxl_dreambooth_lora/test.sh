@@ -10,7 +10,7 @@ MODEL_PATH="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyRealism_V22.sa
 LOCAL_PATH="${REPO_DIR}/sdxl_dreambooth_lora"
 
 LORA_PATH="${LOCAL_PATH}/output/ava_lora.safetensors"
-PROMPT="ava1 girl, front view, leaning on table, cafe setting, casual pose, high quality --n low quality, blurry, bad anatomy"
+PROMPT="ava1 girl, blowjob, sucking a male's dick. 8k, hyperrealistic. --n low quality, bad anatomy, extra fingers, missing fingers, extra limbs, missing limbs, blurry, noise, artifacts"
 
 # === OPTIONAL: GENERATION SETTINGS ===
 OUTPUT_DIR="${LOCAL_PATH}/generated"

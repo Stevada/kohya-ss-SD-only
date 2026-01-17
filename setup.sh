@@ -4,8 +4,8 @@ set -e  # Exit on error
 echo "Updating apt package list..."
 apt-get update
 
-echo "Installing unzip..."
-apt-get install -y unzip
+echo "Installing unzip and zip..."
+apt-get install -y unzip zip
 
 echo "Installing AWS CLI..."
 # Install AWS CLI v2 using the official installer

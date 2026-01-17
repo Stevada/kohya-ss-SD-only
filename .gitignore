@@ -11,3 +11,5 @@ wandb
 MagicMock
 dataset/
 output/
+.env
+generated/
