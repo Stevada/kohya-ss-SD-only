@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is kohya-ss's training scripts repository for Stable Diffusion models. It provides training scripts for fine-tuning, DreamBooth, LoRA, Textual Inversion, and SDXL models. This fork focuses exclusively on SDXL training with identity-preserving features using CLIP vision conditioning.
+This is kohya-ss's training scripts repository for Stable Diffusion models. It provides training scripts for fine-tuning, DreamBooth, LoRA, Textual Inversion, and SDXL models.
 
 ## Essential Commands
 
@@ -27,11 +27,27 @@ accelerate config
 
 ### Training Commands
 
-**SDXL LoRA Training (with identity conditioning):**
+### SDXL DreamBooth LoRA Training (Simplified)
+
+For character/subject training with SDXL, use the convenient scripts in `sdxl_dreambooth_lora/`:
+
 ```bash
-cd sdxl
-./sdxl_train.sh  # Edit paths in script first
+cd sdxl_dreambooth_lora
+# 1. Prepare dataset (see README.md)
+# 2. Edit config.toml with your paths
+# 3. Edit train.sh with model path
+./train.sh
+
+# Test your trained LoRA
+./test.sh
 ```
+
+See [sdxl_dreambooth_lora/README.md](sdxl_dreambooth_lora/README.md) for complete documentation including:
+- Dataset preparation guide with folder/file examples
+- Configuration examples (single/multi-character)
+- Script usage and customization
+- Memory optimization tips
+- Troubleshooting
 
 **Standard LoRA Training (SD1.5/2.x):**
 ```bash
@@ -58,13 +74,7 @@ accelerate launch sdxl_train.py \
 
 ### Image Generation
 
-**SDXL with LoRA (identity conditioning):**
-```bash
-cd sdxl
-./sdxl_test.sh  # Edit paths and prompts in script
-```
-
-**Standard generation:**
+**SDXL with LoRA:**
 ```bash
 python sdxl_gen_img.py \
   --ckpt="model.safetensors" \
@@ -155,30 +165,6 @@ NetworkTrainer (train_network.py)
 - Only network weights require gradients (base model frozen)
 - Supports block-wise learning rates (different LR per U-Net block)
 - LoRA+ supported (`loraplus_lr_ratio` for asymmetric learning rates)
-
-### Identity-Preserving Feature (Custom Addition)
-
-Located in `sdxl_train_network.py` and training scripts:
-
-**Training Phase:**
-- Loads CLIP vision model: `laion/CLIP-ViT-bigG-14-laion2B-39B-b160k`
-- Processes reference images (`conditioning_data_dir`) alongside target images
-- Embeds reference images into 1280-dim vectors
-- Conditions U-Net on these embeddings during denoising
-- Enable with `--use_identity_conditioning --identity_conditioning_strength=1.0`
-
-**Inference Phase:**
-- Pass `--init_image` (reference) and `--clip_vision_strength` to generation script
-- CLIP vision model encodes reference image
-- U-Net conditioned on this embedding to preserve character identity
-
-**Dataset Structure:**
-```
-dataset/
-├── target_images/      # Training images (matched by filename)
-├── control_images/     # Reference images for identity
-└── captions/           # Text captions (.txt files)
-```
 
 ### Important Configuration Concepts
 

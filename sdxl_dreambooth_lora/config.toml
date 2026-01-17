@@ -1,0 +1,62 @@
+# SDXL DreamBooth LoRA - Single Character Configuration Template
+# Copy this file and customize for your dataset
+#
+# Dataset structure:
+#   dataset/my_character/     - Training images (20-50 images)
+#   dataset/regularization/   - Regularization images (100-200 images)
+
+[general]
+# Enable bucketing for variable aspect ratios
+enable_bucket = true
+# Bucket resolution steps (SDXL requires 32, not 64)
+bucket_reso_steps = 32
+# Don't upscale images smaller than target resolution
+bucket_no_upscale = true
+# Caption file extension
+caption_extension = ".txt"
+# Don't shuffle caption tags (set to true for tag-based captions)
+shuffle_caption = false
+# Keep first N tokens during shuffle (preserves trigger word)
+keep_tokens = 1
+
+# ============================================================
+# Training Dataset - Your Character Images
+# ============================================================
+[[datasets]]
+resolution = 1024
+batch_size = 1
+
+  [[datasets.subsets]]
+  # Path to your character images
+  image_dir = "dataset/my_character"
+
+  # Class tokens: "triggerword concept"
+  # Examples: "ohwx person", "sks character", "mychar woman"
+  class_tokens = "ohwx person"
+
+  # Number of times to repeat each image per epoch
+  # Higher values = more training on your character
+  num_repeats = 10
+
+  # Keep first token (trigger word) during caption shuffling
+  keep_tokens = 1
+
+# ============================================================
+# Regularization Dataset - Generic Images
+# ============================================================
+[[datasets]]
+resolution = 1024
+batch_size = 1
+
+  [[datasets.subsets]]
+  # Path to regularization images
+  image_dir = "dataset/regularization"
+
+  # Class tokens for regularization (concept only, no trigger word)
+  class_tokens = "person"
+
+  # Repeat once per epoch
+  num_repeats = 1
+
+  # Mark as regularization dataset
+  is_reg = true

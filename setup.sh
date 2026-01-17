@@ -29,4 +29,8 @@ git config user.name Stevada
 git config user.email stevexu247@gmail.com
 git config --list
 
+mkdir dataset/
+mkdir logs/
+mkdir output/
+
 echo "Setup completed successfully!"
