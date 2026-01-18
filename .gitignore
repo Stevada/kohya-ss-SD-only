@@ -8,8 +8,10 @@ build
 wandb
 .claude
 .gemini
+.env
+.ipynb_checkpoints/
 MagicMock
 dataset/
 output/
-.env
 generated/
+models/

@@ -6,14 +6,15 @@ set -e  # Exit on error
 
 # === REQUIRED: EDIT THESE PATHS ===
 REPO_DIR="/root/kohya-ss-SD-only"
-MODEL_PATH="/workspace/runpod-slim/ComfyUI/models/checkpoints/ponyRealism_V22.safetensors"
-LOCAL_PATH="${REPO_DIR}/sdxl_dreambooth_lora"
-
-LORA_PATH="${REPO_DIR}/output/ava_lora-000005.safetensors"
-PROMPT="ava1 girl, front view, leaning on table, cafe setting, casual pose, high quality --n low quality, bad anatomy, extra fingers, missing fingers, extra limbs, missing limbs, blurry, noise, artifacts"
+MODEL_PATH="${REPO_DIR}/models/ponyRealism_V22.safetensors"
+TRIGGER_WORD="ava1037"
+OUTPUT_NAME="${TRIGGER_WORD}_lora_ponyRealism_V22" # Name for output files
+OUTPUT_DIR="${REPO_DIR}/output/${OUTPUT_NAME}"
+LORA_PATH="${OUTPUT_DIR}/${TRIGGER_WORD}_lora.safetensors"
 
 # === OPTIONAL: GENERATION SETTINGS ===
-OUTPUT_DIR="${LOCAL_PATH}/generated"
+PROMPT="${TRIGGER_WORD}, blow job, the female is sucking the male's dick, 8K, realistic, high quality --n low quality, bad anatomy, extra fingers, missing fingers, extra limbs, missing limbs, blurry, noise, artifacts"
+RESULTS_DIR="${OUTPUT_DIR}/tested"
 LORA_WEIGHT=1.0        # 0.0-1.5, adjust strength
 WIDTH=1024
 HEIGHT=1024
@@ -27,7 +28,7 @@ echo "LoRA: ${LORA_PATH}"
 echo "Prompt: ${PROMPT}"
 echo ""
 
-mkdir -p "${OUTPUT_DIR}"
+mkdir -p "${RESULTS_DIR}"
 
 python "${REPO_DIR}/sdxl_gen_img.py" \
   --ckpt="${MODEL_PATH}" \
@@ -39,9 +40,9 @@ python "${REPO_DIR}/sdxl_gen_img.py" \
   --H=${HEIGHT} \
   --steps=${STEPS} \
   --sampler=euler_a \
-  --outdir="${OUTPUT_DIR}" \
+  --outdir="${RESULTS_DIR}" \
   --fp16 \
   ${SEED:+--seed=${SEED}}
 
 echo ""
-echo "Images generated in: ${OUTPUT_DIR}"
+echo "Images generated in: ${RESULTS_DIR}"

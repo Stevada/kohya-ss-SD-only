@@ -5660,6 +5660,28 @@ def sample_image_inference(
     except:  # wandb 無効時
         pass
 
+    # TensorBoard有効時のみログを送信
+    try:
+        tensorboard_tracker = accelerator.get_tracker("tensorboard")
+        import numpy as np
+
+        # Convert PIL Image to numpy array for TensorBoard
+        # TensorBoard expects CHW format (channels, height, width)
+        img_array = np.array(image)
+
+        # Convert from HWC to CHW format
+        if len(img_array.shape) == 3:
+            img_array = np.transpose(img_array, (2, 0, 1))
+
+        # log_images expects dict with keys mapping to image arrays
+        # Use the same naming convention as WandB for consistency
+        tensorboard_tracker.log_images(
+            {f"sample_{i}": [img_array]},  # Note: expects list of images
+            step=steps
+        )
+    except:  # TensorBoard 無効時
+        pass
+
 
 # endregion
 

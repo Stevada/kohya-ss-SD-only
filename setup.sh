@@ -34,5 +34,6 @@ git config --list
 mkdir dataset/
 mkdir logs/
 mkdir output/
+mkdir models/
 
 echo "Setup completed successfully!"
