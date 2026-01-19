@@ -11,14 +11,15 @@ REPO_DIR="/root/kohya-ss-SD-only"
 MODEL_PATH="${REPO_DIR}/models/ponyRealism_V22.safetensors"
 DATASET_CONFIG="${REPO_DIR}/config.toml" # Your dataset configuration
 TRIGGER_WORD="ava1037"
-OUTPUT_NAME="${TRIGGER_WORD}_lora_ponyRealism_V22" # Name for output files
+OUTPUT_NAME="${TRIGGER_WORD}_lora_ponyRealism_V22_refined_prompts" # Name for output files
 OUTPUT_DIR="${REPO_DIR}/output/${OUTPUT_NAME}"
 
 # === OPTIONAL: TRAINING PARAMETERS ===
 EPOCHS=20
-LEARNING_RATE="5e-5"                      # 1e-4 to 5e-4 recommended
+LEARNING_RATE="3e-4"                      # 1e-4 to 5e-4 recommended
 NETWORK_DIM=32                            # 16 or 8 for lower VRAM
 NETWORK_ALPHA=16
+MAX_TOKEN_LENGTH=225                     # 75, 150, 225
 
 # === OPTIONAL: SAMPLE GENERATION ===
 SAMPLE_EVERY_N_EPOCHS=2                     # 0 to disable
@@ -29,7 +30,7 @@ SAMPLE_SIZE=1024
 SAMPLE_STEPS=20
 SAMPLE_CFG_SCALE=6.0
 SAMPLE_PROMPTS_FILE="${REPO_DIR}/sdxl_dreambooth_lora/sample_prompts.txt"
-REALISM_POSITIVE_PROMPT_TAGS="score_9, score_8_up, score_7_up, BREAK, 8K, realistic, high quality, nsfw"
+REALISM_POSITIVE_PROMPT_TAGS="score_9, score_8_up, score_7_up, BREAK, 8K, realistic, high quality, rating_explicit, nsfw, detailed skin"
 REALISM_POSITIVE_PROMPT="${TRIGGER_WORD}, ${REALISM_POSITIVE_PROMPT_TAGS}"
 REALISM_NEGATIVE_PROMPT_TAGS="score_4, score_5, score_6"
 REALISM_NEGATIVE_PROMPT="${REALISM_NEGATIVE_PROMPT_TAGS}, ai-generated, artifact, artifacts, bad quality, bad scan, blurred, blurry, compressed, compression artifacts, corrupted, dirty art scan, dirty scan, dithering, downsampling, faded lines, frameborder, grainy, heavily compressed, heavily pixelated, high noise, image noise, low dpi, low fidelity, low resolution, lowres, moire pattern, moiré pattern, motion blur, muddy colors, noise, noisy background, overcompressed, pixelation, pixels, poor quality, poor lineart, scanned with errors, scan artifact, scan errors, very low quality, visible pixels"
@@ -79,6 +80,7 @@ accelerate launch --num_cpu_threads_per_process=8 "${REPO_DIR}/sdxl_train_networ
   --bucket_reso_steps=32 \
   --bucket_no_upscale \
   --no_half_vae \
+  --max_token_length=${MAX_TOKEN_LENGTH} \
   --sample_every_n_epochs="${SAMPLE_EVERY_N_EPOCHS}" \
   --save_n_epoch_ratio="${SAVE_N_EPOCH_RATIO}" \
   --log_with="wandb" \
